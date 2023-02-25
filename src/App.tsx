@@ -49,8 +49,16 @@ function App() {
           x: (d) => d.date,
           y: (d) => d.sales,
           z: (d) => d.brand,
-          width: 640,
-          height: 480,
+          dimension: {
+            width: 640,
+            height: 480,
+            margin: {
+              top: 20,
+              right: 30,
+              bottom: 30,
+              left: 40,
+            },
+          },
         }}
       />
     </main>

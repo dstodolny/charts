@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { map, range, extent, max, InternSet, group } from 'd3-array';
 import { select } from 'd3-selection';
 import { axisBottom, axisLeft } from 'd3-axis';
-import { scaleLinear, scaleUtc } from 'd3-scale';
+import { scaleLinear, scaleTime } from 'd3-scale';
 import { line } from 'd3-shape';
 
 interface DataPoint {
@@ -18,13 +18,17 @@ interface Margin {
   left: number;
 }
 
+interface Dimension {
+  width: number;
+  height: number;
+  margin: Margin;
+}
+
 interface Config {
   x: (d: DataPoint) => Date;
   y: (d: DataPoint) => number;
   z: (d: DataPoint) => string;
-  width: number;
-  height: number;
-  margin?: Margin;
+  dimension: Dimension;
 }
 
 interface Props {
@@ -37,29 +41,21 @@ export function LineChart({ data, config }: Props) {
     x,
     y,
     z,
-    width,
-    height,
-    margin = { top: 20, right: 30, bottom: 30, left: 40 },
+    dimension: { width, height, margin },
   } = config;
 
   const svgRef = useRef<SVGSVGElement>(null);
 
   const X = map(data, x);
   const Y = map(data, y);
-  const Z = map(data, z);
-  const O = map(data, (d) => d);
 
-  const xDomain = extent(X, (d) => d) as [Date, Date];
+  const xDomain = extent(X) as [Date, Date];
   const yDomain = [0, max(Y)] as [number, number];
-  const zDomain = new InternSet(Z);
-
-  // Omit any data not present in the z-domain.
-  const I = range(X.length).filter((i) => zDomain.has(Z[i]));
 
   const xRange = [margin.left, width - margin.right];
   const yRange = [height - margin.bottom, margin.top];
 
-  const xScale = scaleUtc().domain(xDomain).range(xRange);
+  const xScale = scaleTime().domain(xDomain).range(xRange);
   const yScale = scaleLinear().domain(yDomain).range(yRange);
 
   const xAxis = axisBottom(xScale)
@@ -69,10 +65,6 @@ export function LineChart({ data, config }: Props) {
 
   useEffect(() => {
     const svg = select(svgRef.current);
-
-    const linePlot = line()
-      .x((i) => xScale(X[i]))
-      .y((i) => yScale(Y[i]));
 
     svg.style('-webkit-tap-highlight-color', 'transparent');
     // .on('pointerenter', pointerentered)
@@ -98,23 +90,17 @@ export function LineChart({ data, config }: Props) {
           .attr('stroke-opacity', 0.1),
       );
 
-    svg
-      .append('g')
-      .attr('fill', 'none')
-      .attr('stroke', 'blue')
-      .attr('stroke-width', 1.5)
-      .attr('stroke-linecap', 'round')
-      .attr('stroke-linejoin', 'round')
-      .attr('stroke-opacity', 1)
-      .selectAll('path')
-      .data(group(I, (i) => Z[i]))
-      .join('path')
-      .attr('stroke', 'currentColor')
-      .style('mix-blend-mode', 'multiply')
-      .attr('d', ([, I]) => linePlot(I));
+    const linePlot = line<DataPoint>()
+      .x((d) => xScale(d.date))
+      .y((d) => yScale(d.sales));
 
-    const dot = svg.append('g').attr('display', 'none');
-    dot.append('circle').attr('r', 2.5);
+    svg
+      .selectAll('path')
+      .data(group(data, (d) => d.brand))
+      .join('path')
+      .attr('fill', 'none')
+      .attr('stroke', 'currentColor')
+      .attr('d', (d) => linePlot(d[1]));
   }, [data]);
 
   return <svg ref={svgRef} width={width} height={height} />;
