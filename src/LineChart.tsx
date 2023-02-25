@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react';
-import { map, range, extent, max } from 'd3-array';
+import { map, range, extent, max, InternSet, group } from 'd3-array';
 import { select } from 'd3-selection';
 import { axisBottom, axisLeft } from 'd3-axis';
-import { scaleLinear } from 'd3-scale';
+import { scaleLinear, scaleUtc } from 'd3-scale';
 import { line } from 'd3-shape';
 
 interface DataPoint {
-  x: number;
-  y: number;
+  brand: string;
+  date: Date;
+  sales: number;
 }
 
 interface Margin {
@@ -18,10 +19,11 @@ interface Margin {
 }
 
 interface Config {
-  x?: (d: DataPoint) => number;
-  y?: (d: DataPoint) => number;
-  width?: number;
-  height?: number;
+  x: (d: DataPoint) => Date;
+  y: (d: DataPoint) => number;
+  z: (d: DataPoint) => string;
+  width: number;
+  height: number;
   margin?: Margin;
 }
 
@@ -32,10 +34,11 @@ interface Props {
 
 export function LineChart({ data, config }: Props) {
   const {
-    x = (d) => d.x,
-    y = (d) => d.y,
-    width = 640,
-    height = 400,
+    x,
+    y,
+    z,
+    width,
+    height,
     margin = { top: 20, right: 30, bottom: 30, left: 40 },
   } = config;
 
@@ -43,30 +46,39 @@ export function LineChart({ data, config }: Props) {
 
   const X = map(data, x);
   const Y = map(data, y);
-  const I = range(X.length);
+  const Z = map(data, z);
+  const O = map(data, (d) => d);
 
-  const xDomain = extent(X) as [number, number];
+  const xDomain = extent(X, (d) => d) as [Date, Date];
   const yDomain = [0, max(Y)] as [number, number];
+  const zDomain = new InternSet(Z);
+
+  // Omit any data not present in the z-domain.
+  const I = range(X.length).filter((i) => zDomain.has(Z[i]));
 
   const xRange = [margin.left, width - margin.right];
   const yRange = [height - margin.bottom, margin.top];
 
-  const xScale = scaleLinear().domain(xDomain).range(xRange);
+  const xScale = scaleUtc().domain(xDomain).range(xRange);
   const yScale = scaleLinear().domain(yDomain).range(yRange);
 
   const xAxis = axisBottom(xScale)
     .ticks(width / 80)
     .tickSizeOuter(0);
-  const yAxis = axisLeft(yScale).ticks(height / 40);
+  const yAxis = axisLeft(yScale).ticks(height / 60); // should be with yFormat
 
   useEffect(() => {
     const svg = select(svgRef.current);
 
-    const coordinates = I.map((i) => ({ x: X[i], y: Y[i] }));
-    const linePlot = line<DataPoint>()
-      .x((d) => xScale(x(d)))
-      .y((d) => yScale(y(d)));
-    const pathData = linePlot(coordinates) || '';
+    const linePlot = line()
+      .x((i) => xScale(X[i]))
+      .y((i) => yScale(Y[i]));
+
+    svg.style('-webkit-tap-highlight-color', 'transparent');
+    // .on('pointerenter', pointerentered)
+    // .on('pointermove', pointermoved)
+    // .on('pointerleave', pointerleft)
+    // .on('touchstart', (event) => event.preventDefault());
 
     svg
       .append('g')
@@ -87,14 +99,22 @@ export function LineChart({ data, config }: Props) {
       );
 
     svg
-      .append('path')
+      .append('g')
       .attr('fill', 'none')
-      .attr('stroke', 'currentColor')
+      .attr('stroke', 'blue')
       .attr('stroke-width', 1.5)
       .attr('stroke-linecap', 'round')
       .attr('stroke-linejoin', 'round')
       .attr('stroke-opacity', 1)
-      .attr('d', pathData);
+      .selectAll('path')
+      .data(group(I, (i) => Z[i]))
+      .join('path')
+      .attr('stroke', 'currentColor')
+      .style('mix-blend-mode', 'multiply')
+      .attr('d', ([, I]) => linePlot(I));
+
+    const dot = svg.append('g').attr('display', 'none');
+    dot.append('circle').attr('r', 2.5);
   }, [data]);
 
   return <svg ref={svgRef} width={width} height={height} />;

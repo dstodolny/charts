@@ -2,22 +2,57 @@ import React from 'react';
 import { LineChart } from './LineChart';
 
 const data = [
-  { x: 1, y: 2 },
-  { x: 2, y: 3 },
-  { x: 3, y: 5 },
-  { x: 4, y: 4 },
-  { x: 5, y: 6 },
-  { x: 6, y: 8 },
-  { x: 7, y: 7 },
-  { x: 8, y: 9 },
-  { x: 9, y: 10 },
-  { x: 10, y: 12 },
+  { brand: 'Brand A', date: new Date('2022-01-01'), sales: 100 },
+  { brand: 'Brand A', date: new Date('2022-02-01'), sales: 200 },
+  { brand: 'Brand A', date: new Date('2022-03-01'), sales: 150 },
+  { brand: 'Brand A', date: new Date('2022-04-01'), sales: 300 },
+  { brand: 'Brand A', date: new Date('2022-05-01'), sales: 250 },
+  { brand: 'Brand A', date: new Date('2022-06-01'), sales: 350 },
+  { brand: 'Brand A', date: new Date('2022-07-01'), sales: 400 },
+  { brand: 'Brand A', date: new Date('2022-08-01'), sales: 450 },
+  { brand: 'Brand A', date: new Date('2022-09-01'), sales: 350 },
+  { brand: 'Brand A', date: new Date('2022-10-01'), sales: 300 },
+  { brand: 'Brand A', date: new Date('2022-11-01'), sales: 200 },
+  { brand: 'Brand A', date: new Date('2022-12-01'), sales: 150 },
+  { brand: 'Brand B', date: new Date('2022-01-01'), sales: 50 },
+  { brand: 'Brand B', date: new Date('2022-02-01'), sales: 250 },
+  { brand: 'Brand B', date: new Date('2022-03-01'), sales: 175 },
+  { brand: 'Brand B', date: new Date('2022-04-01'), sales: 275 },
+  { brand: 'Brand B', date: new Date('2022-05-01'), sales: 300 },
+  { brand: 'Brand B', date: new Date('2022-06-01'), sales: 400 },
+  { brand: 'Brand B', date: new Date('2022-07-01'), sales: 450 },
+  { brand: 'Brand B', date: new Date('2022-08-01'), sales: 375 },
+  { brand: 'Brand B', date: new Date('2022-09-01'), sales: 325 },
+  { brand: 'Brand B', date: new Date('2022-10-01'), sales: 200 },
+  { brand: 'Brand B', date: new Date('2022-11-01'), sales: 100 },
+  { brand: 'Brand B', date: new Date('2022-12-01'), sales: 75 },
+  { brand: 'Brand C', date: new Date('2022-01-01'), sales: 150 },
+  { brand: 'Brand C', date: new Date('2022-02-01'), sales: 275 },
+  { brand: 'Brand C', date: new Date('2022-03-01'), sales: 200 },
+  { brand: 'Brand C', date: new Date('2022-04-01'), sales: 275 },
+  { brand: 'Brand C', date: new Date('2022-05-01'), sales: 300 },
+  { brand: 'Brand C', date: new Date('2022-06-01'), sales: 150 },
+  { brand: 'Brand C', date: new Date('2022-07-01'), sales: 200 },
+  { brand: 'Brand C', date: new Date('2022-08-01'), sales: 250 },
+  { brand: 'Brand C', date: new Date('2022-09-01'), sales: 300 },
+  { brand: 'Brand C', date: new Date('2022-10-01'), sales: 400 },
+  { brand: 'Brand C', date: new Date('2022-11-01'), sales: 450 },
+  { brand: 'Brand C', date: new Date('2022-12-01'), sales: 500 },
 ];
 
 function App() {
   return (
     <main>
-      <LineChart data={data} config={{}} />
+      <LineChart
+        data={data}
+        config={{
+          x: (d) => d.date,
+          y: (d) => d.sales,
+          z: (d) => d.brand,
+          width: 640,
+          height: 480,
+        }}
+      />
     </main>
   );
 }
