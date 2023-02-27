@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { map, range, extent, max, InternSet, group } from 'd3-array';
-import { select } from 'd3-selection';
+import { map, extent, max, group } from 'd3-array';
+import { select, Selection } from 'd3-selection';
 import { axisBottom, axisLeft } from 'd3-axis';
 import { scaleLinear, scaleTime } from 'd3-scale';
 import { line } from 'd3-shape';
@@ -43,41 +43,36 @@ export function LineChart({ data, config }: Props) {
     z,
     dimension: { width, height, margin },
   } = config;
-
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const X = map(data, x);
-  const Y = map(data, y);
+  const xScale = scaleTime()
+    .domain(extent(map(data, x)) as [Date, Date])
+    .range([margin.left, width - margin.right]);
+  const yScale = scaleLinear()
+    .domain([0, max(map(data, y))] as [number, number])
+    .range([height - margin.bottom, margin.top]);
 
-  const xDomain = extent(X) as [Date, Date];
-  const yDomain = [0, max(Y)] as [number, number];
+  const setupSVG = (
+    selection: Selection<SVGSVGElement | null, unknown, null, undefined>,
+  ) => {
+    selection
+      .attr('width', width)
+      .attr('height', height)
+      .style('-webkit-tap-highlight-color', 'transparent');
+  };
 
-  const xRange = [margin.left, width - margin.right];
-  const yRange = [height - margin.bottom, margin.top];
-
-  const xScale = scaleTime().domain(xDomain).range(xRange);
-  const yScale = scaleLinear().domain(yDomain).range(yRange);
-
-  const xAxis = axisBottom(xScale)
-    .ticks(width / 80)
-    .tickSizeOuter(0);
-  const yAxis = axisLeft(yScale).ticks(height / 60); // should be with yFormat
-
-  useEffect(() => {
-    const svg = select(svgRef.current);
-
-    svg.style('-webkit-tap-highlight-color', 'transparent');
-    // .on('pointerenter', pointerentered)
-    // .on('pointermove', pointermoved)
-    // .on('pointerleave', pointerleft)
-    // .on('touchstart', (event) => event.preventDefault());
-
-    svg
+  const drawGrid = (
+    selection: Selection<SVGSVGElement | null, unknown, null, undefined>,
+  ) => {
+    const xAxis = axisBottom(xScale)
+      .ticks(width / 80)
+      .tickSizeOuter(0);
+    const yAxis = axisLeft(yScale).ticks(height / 60);
+    selection
       .append('g')
       .attr('transform', `translate(0,${height - margin.bottom})`)
       .call(xAxis);
-
-    svg
+    selection
       .append('g')
       .attr('transform', `translate(${margin.left},0)`)
       .call(yAxis)
@@ -89,19 +84,28 @@ export function LineChart({ data, config }: Props) {
           .attr('x2', width - margin.left - margin.right)
           .attr('stroke-opacity', 0.1),
       );
+  };
 
-    const linePlot = line<DataPoint>()
+  const drawLines = (
+    selection: Selection<SVGSVGElement | null, unknown, null, undefined>,
+  ) => {
+    const generateLine = line<DataPoint>()
       .x((d) => xScale(d.date))
       .y((d) => yScale(d.sales));
 
-    svg
-      .selectAll('path')
-      .data(group(data, (d) => d.brand))
+    const lines = selection
+      .selectAll('.line')
+      .data(group(data, z))
       .join('path')
+      .attr('class', 'line')
+      .attr('d', (d) => generateLine(d[1]))
       .attr('fill', 'none')
-      .attr('stroke', 'currentColor')
-      .attr('d', (d) => linePlot(d[1]));
+      .attr('stroke', 'currentColor');
+  };
+
+  useEffect(() => {
+    select(svgRef.current).call(setupSVG).call(drawGrid).call(drawLines);
   }, [data]);
 
-  return <svg ref={svgRef} width={width} height={height} />;
+  return <svg ref={svgRef} />;
 }
